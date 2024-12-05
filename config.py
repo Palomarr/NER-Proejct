@@ -15,9 +15,8 @@ WORD_UNK_ID = 1
 LABEL_O_ID = 0
 
 VOCAB_SIZE = 3000
-EMBEDDING_DIM = 100
 HIDDEN_SIZE = 256
-TARGET_SIZE = 31
+BATCH_SIZE = 100
 LR = 1e-4
 EPOCH = 50
 GRAD_CLIP=1.0
@@ -29,8 +28,8 @@ import torch
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-# bert改造
-BERT_MODEL = './HuggingFace/bert-base-chinese'
+# bert
+BERT_MODEL = 'bert-base-cased'
 EMBEDDING_DIM = 768
 MAX_POSITION_EMBEDDINGS = 512
 

@@ -1,13 +1,23 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils import data
 from config import *
 import pandas as pd
 from seqeval.metrics import classification_report
 
-from transformers import BertTokenizer
-from transformers import logging
+from transformers import BertTokenizerFast, logging
  
+
 logging.set_verbosity_warning()
+
+tokenizer = BertTokenizerFast.from_pretrained(BERT_MODEL)
+
+# Ensure the pad token is set
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = '[PAD]'
+
+WORD_PAD_ID = tokenizer.pad_token_id
+
 
 def get_vocab():
     df = pd.read_csv(VOCAB_PATH, names=['word', 'id'])
@@ -16,64 +26,96 @@ def get_vocab():
 
 def get_label():
     df = pd.read_csv(LABEL_PATH, names=['label', 'id'])
-    return list(df['label']), dict(df.values)
+    label_list = list(df['label'])
+    label2id = {label: idx for idx, label in enumerate(label_list)}
+    id2label = {idx: label for idx, label in enumerate(label_list)}
+    return label_list, label2id, id2label
+
+
+_, label2id, _ = get_label()
+LABEL_O_ID = label2id['O']
 
 
 class Dataset(data.Dataset):
-
-    def __init__(self, type='train', base_len=50):
+    def __init__(self, type='train'):
         super().__init__()
-        self.base_len = base_len
         sample_path = TRAIN_SAMPLE_PATH if type == 'train' else TEST_SAMPLE_PATH
-        self.df = pd.read_csv(sample_path, names=['word', 'label'])
-        _, self.word2id = get_vocab()
-        _, self.label2id = get_label()
-        self.get_points()
-        # 初始化Bert
-        BERT_MODEL = "bert-base-chinese"
-        self.tokenizer = BertTokenizer.from_pretrained(BERT_MODEL, cache_dir='./HuggingFace/bert-base-chinese')
+        self.samples = self.load_samples(sample_path)
+        self.tokenizer = tokenizer
+        _, self.label2id, _ = get_label()
 
-    def get_points(self):
-        self.points = [0]
-        i = 0
-        while True:
-            if i + self.base_len >= len(self.df):
-                self.points.append(len(self.df))
-                break
-            if self.df.loc[i + self.base_len, 'label'] == 'O':
-                i += self.base_len
-                self.points.append(i)
-            else:
-                i += 1
-
-    def __len__(self):
-        return len(self.points) - 1
 
     def __getitem__(self, index):
-        df = self.df[self.points[index]:self.points[index + 1]]
-        word_unk_id = self.word2id[WORD_UNK]
-        label_o_id = self.label2id['O']
-        # input = [self.word2id.get(w, word_unk_id) for w in df['word']]
-        # 注意：先自己将句子做分词，再转id，避免bert自动分词导致句子长度变化
-        input = self.tokenizer.encode(list(df['word']), add_special_tokens=False)
-        target = [self.label2id.get(l, label_o_id) for l in df['label']]
-        # return input, target
-        # bert要求句子长度不能超过512
-        return input[:MAX_POSITION_EMBEDDINGS], target[:MAX_POSITION_EMBEDDINGS]
+        words, labels = self.samples[index]
+        encoding = self.tokenizer(
+            words,
+            is_split_into_words=True,
+            truncation=True,
+            max_length=MAX_POSITION_EMBEDDINGS,
+            return_special_tokens_mask=True,
+        )
+        input_ids = torch.tensor(encoding['input_ids'], dtype=torch.long)
+        word_ids = encoding.word_ids()
+
+        label_ids = []
+        mask = []
+
+        for idx, word_idx in enumerate(word_ids):
+            if word_idx is None:
+                # Special tokens ([CLS], [SEP], [PAD])
+                label_ids.append(LABEL_O_ID)  # Assign 'O' label
+                mask.append(0)  # Mask out
+            else:
+                label = labels[word_idx]
+                label_id = self.label2id.get(label, LABEL_O_ID)
+                label_ids.append(label_id)
+                mask.append(1)  # Valid token
+
+        label_ids = torch.tensor(label_ids, dtype=torch.long)
+        mask = torch.tensor(mask, dtype=torch.bool)
+        # Ensure the first timestep of the mask is always on (1)
+        mask[0] = 1
+
+        return input_ids, label_ids, mask
+
+    
+    def load_samples(self, sample_path):
+        """Load samples from the dataset file."""
+        samples = []
+        with open(sample_path, 'r', encoding='utf-8') as f:
+            words = []
+            labels = []
+            for line in f:
+                if line.strip() == '':
+                    if words:  # End of a sample
+                        samples.append((words, labels))
+                        words = []
+                        labels = []
+                else:
+                    word, label = line.strip().split('\t')
+                    words.append(word)
+                    labels.append(label)
+        if words:  # Handle the last sample
+            samples.append((words, labels))
+        return samples
+
+
+    def __len__(self):
+        """Return the number of samples in the dataset."""
+        return len(self.samples)
+
 
 
 def collate_fn(batch):
-    batch.sort(key=lambda x: len(x[0]), reverse=True)
-    max_len = len(batch[0][0])
-    input = []
-    target = []
-    mask = []
-    for item in batch:
-        pad_len = max_len - len(item[0])
-        input.append(item[0] + [WORD_PAD_ID] * pad_len)
-        target.append(item[1] + [LABEL_O_ID] * pad_len)
-        mask.append([1] * len(item[0]) + [0] * pad_len)
-    return torch.tensor(input), torch.tensor(target), torch.tensor(mask).bool()
+    inputs, labels, masks = zip(*batch)
+    inputs = pad_sequence(inputs, batch_first=True, padding_value=WORD_PAD_ID)
+    labels = pad_sequence(labels, batch_first=True, padding_value=LABEL_O_ID)
+    masks = pad_sequence(masks, batch_first=True, padding_value=0)
+
+    masks[:, 0] = 1
+
+    return inputs, labels, masks
+
 
 
 def extract(label, text):
@@ -96,14 +138,3 @@ def extract(label, text):
 def report(y_true, y_pred):
     return classification_report(y_true, y_pred)
     
-
-if __name__ == '__main__':
-    dataset = Dataset()
-    loader = data.DataLoader(dataset, batch_size=100, collate_fn=collate_fn)
-    unique_labels = set()
-    for _, targets, _ in loader:
-        for target_sequence in targets:
-            unique_labels.update(target_sequence.flatten().tolist())
-    print(f"Unique labels in the dataset: {sorted(unique_labels)}")
-    print(f"Number of unique labels: {len(unique_labels)}")
-    print(next(iter(loader)))

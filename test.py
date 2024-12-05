@@ -1,17 +1,25 @@
 import torch
 from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report
-from utils import Dataset, collate_fn, get_label
+from seqeval.metrics import classification_report
+from utils import Dataset, collate_fn, get_label, report
 from model import Model
-from config import DEVICE, MODEL_DIR
+from config import *
 
 if __name__ == '__main__':
     # Initialize the test dataset and data loader
-    dataset = Dataset('test')
-    loader = DataLoader(dataset, batch_size=2, collate_fn=collate_fn)
+    test_dataset = Dataset(type='test')
+    test_loader = DataLoader(
+    test_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    collate_fn=collate_fn,
+    )
+
+    label_list, label2id, id2label = get_label()
+    num_labels = len(label_list)
 
     # Instantiate the model
-    model = Model()
+    model = Model(num_labels=num_labels)
     
     # Load the saved state dictionary with weights_only=True (if using PyTorch 2.1+)
     try:
@@ -33,7 +41,7 @@ if __name__ == '__main__':
     id2label, _ = get_label()
 
     with torch.no_grad():
-        for b, (inputs, targets, masks) in enumerate(loader):
+        for b, (inputs, targets, masks) in enumerate(test_loader):
             # Move data to the specified device
             inputs = inputs.to(DEVICE)
             masks = masks.bool().to(DEVICE)
@@ -58,4 +66,4 @@ if __name__ == '__main__':
     y_pred_flat = [label for seq in y_pred_list for label in seq]
 
     # Generate and print the evaluation report
-    print(classification_report(y_true_flat, y_pred_flat))
+    print(report(y_true_flat, y_pred_flat))
