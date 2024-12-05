@@ -5,3 +5,4 @@ HuggingFace/
 *.pyc
 __pycache__/
 input/
+.DS_Store
