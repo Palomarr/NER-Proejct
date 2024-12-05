@@ -1,95 +1,61 @@
-from glob import glob
 import os
-import random
 import pandas as pd
+from datasets import load_dataset
 from config import *
 
 
-# 根据标注文件生成对应关系
-def get_annotation(ann_path):
-    with open(ann_path,encoding='utf-8') as file:
-        anns = {}
-        for line in file.readlines():
-            arr = line.split('\t')[1].split()
-            name = arr[0]
-            start = int(arr[1])
-            end = int(arr[-1])
-            # 标注太长，可能有问题
-            if end - start > 50:
-                continue
-            anns[start] = 'B-' + name
-            for i in range(start + 1, end):
-                anns[i] = 'I-' + name
-        return anns
+# Load the dataset
+dataset = load_dataset("DFKI-SLT/cross_ner", "conll2003", cache_dir="./input/cross")
+print(dataset)
 
+# Get label names
+ner_feature = dataset['train'].features['ner_tags']
+label_names = ner_feature.feature.names
+id_to_label = {i: label for i, label in enumerate(label_names)}
 
-def get_text(txt_path):
-    with open(txt_path,encoding='utf-8') as file:
-        return file.read()
+# Clear existing sample files
+open(TRAIN_SAMPLE_PATH, 'w', encoding='utf-8').close()
+open(TEST_SAMPLE_PATH, 'w', encoding='utf-8').close()
 
+# Function to process and save a split
+def process_and_save_split(dataset_split, output_file):
+    with open(output_file, 'a', encoding='utf-8') as f:
+        for example in dataset_split:
+            tokens = example['tokens']
+            ner_tags = example['ner_tags']
+            for token, tag_id in zip(tokens, ner_tags):
+                label = id_to_label[tag_id]
+                f.write(f"{token}\t{label}\n")
+            f.write('\n')  # Empty line to separate sentences
 
-# 建立文字和标签对应关系
-def generate_annotation():
-    for txt_path in glob(ORIGIN_DIR + '*.txt'):
-        ann_path = txt_path[:-3] + 'ann'
-        anns = get_annotation(ann_path)
-        text = get_text(txt_path)
-        # 建立文字和标注对应
-        df = pd.DataFrame({'word': list(text), 'label': ['O'] * len(text)})
-        df.loc[anns.keys(), 'label'] = list(anns.values())
-        # 导出文件
-        file_name = os.path.split(txt_path)[1]
-        df.to_csv(ANNOTATION_DIR + file_name, header=None, index=None)
+# Process train and validation splits and save to train_sample.txt
+process_and_save_split(dataset['train'], TRAIN_SAMPLE_PATH)
+process_and_save_split(dataset['validation'], TRAIN_SAMPLE_PATH)
 
+# Process test split and save to test_sample.txt
+process_and_save_split(dataset['test'], TEST_SAMPLE_PATH)
 
-# 拆分训练集和测试集
-def split_sample(test_size=0.3):
-    files = glob(ANNOTATION_DIR + '*.txt')
-    random.seed(0)
-    random.shuffle(files)
-    n = int(len(files) * test_size)
-    test_files = files[:n]
-    train_files = files[n:]
-    # 合并文件
-    merge_file(train_files, TRAIN_SAMPLE_PATH)
-    merge_file(test_files, TEST_SAMPLE_PATH)
-
-
-def merge_file(files, target_path):
-    with open(target_path, 'a',encoding='utf-8') as file:
-        for f in files:
-            text = open(f,encoding='utf-8').read()
-            file.write(text)
-
-
-# 生成词表
+# Generate vocab
 def generate_vocab():
-    df = pd.read_csv(TRAIN_SAMPLE_PATH, usecols=[0], names=['word'])
-    vocab_list = [WORD_PAD, WORD_UNK] + df['word'].value_counts().keys().tolist()
-    vocab_list = vocab_list[:VOCAB_SIZE]
+    vocab_set = set()
+    with open(TRAIN_SAMPLE_PATH, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.strip() == '':
+                continue
+            token, _ = line.strip().split('\t')
+            vocab_set.add(token)
+    vocab_list = ['[PAD]', '[UNK]'] + sorted(vocab_set)
     vocab_dict = {v: k for k, v in enumerate(vocab_list)}
-    vocab = pd.DataFrame(list(vocab_dict.items()))
-    vocab.to_csv(VOCAB_PATH, header=None, index=None)
+    vocab_df = pd.DataFrame(list(vocab_dict.items()))
+    vocab_df.to_csv(VOCAB_PATH, header=None, index=None)
 
-
-# 生成标签表
+# Generate label
 def generate_label():
-    df = pd.read_csv(TRAIN_SAMPLE_PATH, usecols=[1], names=['label'])
-    label_list = df['label'].value_counts().keys().tolist()
+    label_list = label_names
     label_dict = {v: k for k, v in enumerate(label_list)}
-    label = pd.DataFrame(list(label_dict.items()))
-    label.to_csv(LABEL_PATH, header=None, index=None)
+    label_df = pd.DataFrame(list(label_dict.items()))
+    label_df.to_csv(LABEL_PATH, header=None, index=None)
 
-
-if __name__ == '__main__':
-    # 建立文字和标签对应关系
-    generate_annotation()
-
-    # 拆分训练集和测试集
-    split_sample()
-
-    # 生成词表
-    generate_vocab()
-
-    # 生成标签表
-    generate_label()
+# Generate vocab and label files
+generate_vocab()
+generate_label()
