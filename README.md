@@ -16,9 +16,7 @@ The dataset comes from the **Tianchi competition**: [MMC Knowledge Graph Competi
 
 ## Directory Structure
 
-
-
-
+```
 ├── README.md
 ├── input
 ├── output
@@ -30,7 +28,7 @@ The dataset comes from the **Tianchi competition**: [MMC Knowledge Graph Competi
 ├── test.py
 ├── train.py
 └── utils.py
-
+```
 
 ### Directory Details
 
@@ -79,7 +77,6 @@ Stores processed files and outputs:
 
 5. **`train.py`**  
    Train the model:
-   - Supports local or cloud training (e.g., Kaggle).
    - Includes checkpointing for interrupted training.
 
 6. **`test.py`**  
@@ -89,13 +86,6 @@ Stores processed files and outputs:
 7. **`predict.py`**  
    Use the trained model for predictions:
    - Input custom text and identify entities with their labels.
-
----
-
-## Notes on Training
-
-- **Checkpointing**:  
-   To save space and ensure training can resume efficiently, checkpointing is implemented.
 
 ---
 
