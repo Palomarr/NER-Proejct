@@ -29,7 +29,6 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # bert
-BERT_MODEL = 'bert-base-cased'
-EMBEDDING_DIM = 768
 MAX_POSITION_EMBEDDINGS = 512
+BERT_MODEL = "bert-base-uncased"
 

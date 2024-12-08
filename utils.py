@@ -20,8 +20,19 @@ WORD_PAD_ID = tokenizer.pad_token_id
 
 
 def get_vocab():
-    df = pd.read_csv(VOCAB_PATH, names=['word', 'id'])
-    return list(df['word']), dict(df.values)
+    df = pd.read_csv(VOCAB_PATH, names=['word', 'id'])    
+    # Sort the dataframe by ID to ensure correct order
+    df = df.sort_values('id')
+    
+    words = df['word'].tolist()
+    word2id = {w: i for i, w in enumerate(words)}
+
+    # Ensure [UNK] token exists for unknown words
+    if '[UNK]' not in word2id:
+        word2id['[UNK]'] = len(word2id)
+        words.append('[UNK]')
+    
+    return words, word2id
 
 
 def get_label():
@@ -47,6 +58,9 @@ class Dataset(data.Dataset):
 
     def __getitem__(self, index):
         words, labels = self.samples[index]
+        # Get the word2id mapping from your vocab
+        _, word2id = get_vocab()
+        
         encoding = self.tokenizer(
             words,
             is_split_into_words=True,
@@ -54,7 +68,17 @@ class Dataset(data.Dataset):
             max_length=MAX_POSITION_EMBEDDINGS,
             return_special_tokens_mask=True,
         )
-        input_ids = torch.tensor(encoding['input_ids'], dtype=torch.long)
+        
+        # Convert input_ids to use only valid vocabulary
+        input_ids = []
+        for token_id in encoding['input_ids']:
+            # Replace any token IDs that are not in the vocabulary with UNK token
+            if token_id >= len(word2id):
+                input_ids.append(word2id.get('[UNK]', 0))
+            else:
+                input_ids.append(token_id)
+        
+        input_ids = torch.tensor(input_ids, dtype=torch.long)
         word_ids = encoding.word_ids()
 
         label_ids = []
@@ -62,14 +86,13 @@ class Dataset(data.Dataset):
 
         for idx, word_idx in enumerate(word_ids):
             if word_idx is None:
-                # Special tokens ([CLS], [SEP], [PAD])
                 label_ids.append(LABEL_O_ID)  # Assign 'O' label
-                mask.append(0)  # Mask out
+                mask.append(0)
             else:
                 label = labels[word_idx]
                 label_id = self.label2id.get(label, LABEL_O_ID)
                 label_ids.append(label_id)
-                mask.append(1)  # Valid token
+                mask.append(1)
 
         label_ids = torch.tensor(label_ids, dtype=torch.long)
         mask = torch.tensor(mask, dtype=torch.bool)
@@ -87,7 +110,7 @@ class Dataset(data.Dataset):
             labels = []
             for line in f:
                 if line.strip() == '':
-                    if words:  # End of a sample
+                    if words:
                         samples.append((words, labels))
                         words = []
                         labels = []
@@ -95,7 +118,7 @@ class Dataset(data.Dataset):
                     word, label = line.strip().split('\t')
                     words.append(word)
                     labels.append(label)
-        if words:  # Handle the last sample
+        if words:
             samples.append((words, labels))
         return samples
 

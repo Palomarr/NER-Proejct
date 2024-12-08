@@ -1,10 +1,11 @@
 import torch.nn as nn
 from torchcrf import CRF
-from transformers import BertModel
-from config import BERT_MODEL
+from transformers import BertModel, BertTokenizer
+import os
 
 # Define constants
-EMBEDDING_DIM = 768  # Embedding dimension (BERT default)
+BERT_MODEL = 'bert-base-uncased'
+EMBEDDING_DIM = 768  # Embedding dimension
 HIDDEN_SIZE = 256  # LSTM hidden size
 
 

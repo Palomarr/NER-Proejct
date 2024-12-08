@@ -1,9 +1,9 @@
 import torch
 from torch.utils.data import DataLoader
 from seqeval.metrics import classification_report, accuracy_score
-from models.bert_model import ClassicBERTNER
-from utils import Dataset, collate_fn, get_label
-from config import *
+from BBC.models.bert_model import ClassicBERTNER
+from BBC.utils import Dataset, collate_fn, get_label
+from BBC.config import *
 import os
 
 def evaluate_classic_bert(model_epoch=50):
@@ -13,7 +13,7 @@ def evaluate_classic_bert(model_epoch=50):
     
     # Initialize model
     model = ClassicBERTNER(num_labels=num_labels).to(DEVICE)
-    model_path = f"{MODEL_DIR}/classic_bert/model_epoch_{model_epoch}.pth"
+    model_path = f"{MODEL_DIR}/bert/model_epoch_{model_epoch}.pth"
     
     if not os.path.exists(model_path):
         print(f"Model file {model_path} not found.")
@@ -65,7 +65,7 @@ def evaluate_classic_bert(model_epoch=50):
     print(report)
     
     # Save report
-    report_path = f"{MODEL_DIR}/classic_bert/evaluation_report_epoch_{model_epoch}.txt"
+    report_path = f"{MODEL_DIR}/bert/evaluation_report_epoch_{model_epoch}.txt"
     with open(report_path, "w") as f:
         f.write("=== Evaluation Metrics for Classic BERT Model ===\n\n")
         f.write(f"Accuracy: {accuracy:.4f}\n\n")

@@ -1,6 +1,6 @@
 # Pytorch BiLSTM_CRF Medical Named Entity Recognition (NER)
 
-This project focuses on medical named entity recognition (NER) using a combination of **BERT**, **BiLSTM**, and **CRF** models. The task involves identifying medical entities from text based on annotated data provided by the **Tianchi competition** hosted by Alibaba.
+This project focuses on medical named entity recognition (NER) using combinations of **BERT**, **BiLSTM**, and **CRF** models. The task involves identifying medical entities from text based on annotated data provided by the **Tianchi competition** hosted by Alibaba.
 
 ## Overview
 
@@ -10,7 +10,6 @@ Named Entity Recognition (NER) is a foundational task in Natural Language Proces
 - **BiLSTM**: A bidirectional recurrent neural network for capturing sequential data patterns.
 - **CRF**: Conditional Random Field for modeling dependencies between output labels.
 
-The dataset comes from the **Tianchi competition**: [MMC Knowledge Graph Competition by Ruijin Hospital](https://tianchi.aliyun.com/competition/entrance/231687/information).
 
 ---
 
@@ -20,73 +19,104 @@ The dataset comes from the **Tianchi competition**: [MMC Knowledge Graph Competi
 ├── README.md
 ├── input
 ├── output
-├── config.py
-├── data_process.py
-├── environment.yml
-├── model.py
+│ ├── model
+│ │ ├── bbc
+│ │ ├── bert
+│ │ └── bilstm
+│ ├── label.txt
+│ ├── test_sample.txt
+│ ├── train_sample.txt
+│ └── vocab.txt
+├── models
+│ ├── bbc_model.py
+│ ├── bert_model.py
+│ └── bilstm_model.py
+├── training
+│ ├── train_bbc.py
+│ ├── train_bert.py
+│ └── train_bilstm.py
+├── eval
+│ ├── evaluate_bbc.py
+│ ├── evaluate_bert.py
+│ └── evaluate_bilstm.py
 ├── predict.py
-├── test.py
-├── train.py
-└── utils.py
+├── data_process.py
+├── utils.py
+├── config.py
+└── environment.yml
 ```
+
 
 ### Directory Details
 
 #### `input/`
-Contains input datasets for training and prediction:
-- **`origin/`**: Original files, including:
-  - `xx.txt`: Raw text files.
-  - `xx.ann`: Annotation files containing positions, entity types, and details of positive samples.
+Contains input datasets for training and prediction.
 
 #### `output/`
-Stores processed files and outputs:
-- **`annotation/`**: Annotated `.txt` files with marked entities.
-- **`train_sample.txt`**: Pre-processed training set for model training.
-- **`test_sample.txt`**: Pre-processed test set for evaluation (e.g., precision, recall, F1 score).
-- **`label.txt`**: Dictionary of entity types for NER.
-- **`vocab.txt`**: Character vocabulary with corresponding indices.
+Stores processed files and model outputs:
+- **`train_sample.txt`** and **`test_sample.txt`**: Pre-processed samples for training and testing.
+- **`vocab.txt`**: Character vocabulary and corresponding indices.
+- **`label.txt`**: Entity type dictionary for NER.
+- **`model/`**: Subdirectories for saved model checkpoints (e.g., `bbc/`, `bert/`, `bilstm/`).
+
+#### `models/`
+Contains model architectures:
+- **`bert_model.py`**: BERT-based NER model definition.
+- **`bilstm_model.py`**: BiLSTM-CRF based NER model definition.
+- **`bbc_model.py`**: Combined BERT + BiLSTM + CRF model definition.
+
+#### `training/`
+Training scripts for each model:
+- **`train_bbc.py`**: Trains the BERT-BiLSTM-CRF model.
+- **`train_bert.py`**: Trains the BERT-based NER model.
+- **`train_bilstm.py`**: Trains the BiLSTM-CRF based NER model.
+
+#### `eval/`
+Evaluation scripts:
+- **`evaluate_bbc.py`**: Evaluates the BERT-BiLSTM-CRF model.
+- **`evaluate_bert.py`**: Evaluates the BERT-based NER model.
+- **`evaluate_bilstm.py`**: Evaluates the BiLSTM-CRF based NER model.
 
 ---
 
-## Scripts
+## Scripts Overview
 
-- **`config.py`**: Configures file paths, training parameters, and other constants.
-- **`data_process.py`**: Pre-processes data to generate output files for training and evaluation.
-- **`utils.py`**: Provides utility functions for loading vocabularies, initializing BERT, etc.
-- **`model.py`**: Implements the BERT + BiLSTM + CRF model.
-- **`train.py`**: Trains the model. Can run locally or on Kaggle.
-- **`test.py`**: Evaluates the trained model with metrics like precision, recall, and F1 score.
-- **`predict.py`**: Predicts entities and labels from user-provided text.
+- **`config.py`**: Configures file paths, training parameters, and constants.
+- **`data_process.py`**: Pre-processes raw data into training and testing samples, and generates `vocab.txt` and `label.txt`.
+- **`utils.py`**: Provides utilities for loading vocabularies, initializing models, and tokenization.
+- **`predict.py`**: Uses a trained model to predict entities from user-provided text.
 
 ---
 
 ## Execution Workflow
 
 1. **`config.py`**  
-   Configure file paths and training parameters.
+   Set file paths and training parameters.
 
 2. **`data_process.py`**  
-   Preprocess data:
-   - Generate files such as `train_sample.txt`, `test_sample.txt`, `label.txt`, and `vocab.txt` in the `output/` directory.
+   Preprocess data to produce `train_sample.txt`, `test_sample.txt`, `vocab.txt`, and `label.txt` in `output/`.
 
 3. **`utils.py`**  
-   Load vocabularies, prepare tokenizers, and initialize the pre-trained BERT model.
+   Load vocab, initialize tokenizers, and set up models.
 
-4. **`model.py`**  
-   Define the model architecture using BERT, BiLSTM, and CRF components.
+4. **`models/`**  
+   Defines architectures for BERT, BiLSTM, and BERT+BiLSTM+CRF.
 
-5. **`train.py`**  
-   Train the model:
-   - Includes checkpointing for interrupted training.
+5. **`training/train_*.py`**  
+   Train the chosen model (BERT, BiLSTM, or BBC). Checkpoints saved under `output/model/`.
 
-6. **`test.py`**  
-   Evaluate the model on the test set:
-   - Generates performance metrics such as precision, recall, and F1 score.
+6. **`eval/evaluate_*.py`**  
+   Evaluate trained models to get metrics like precision, recall, and F1 score.
 
 7. **`predict.py`**  
-   Use the trained model for predictions:
-   - Input custom text and identify entities with their labels.
+   Predict entities in new text using a trained model.
 
 ---
 
-This project demonstrates a complete implementation of an NER system for medical texts using advanced NLP techniques.
+## Additional Notes
+
+- Models can be trained locally or on platforms like Kaggle.
+- Checkpoints are saved for resuming or comparing models.
+- NER metrics (precision, recall, F1) help measure model performance.
+
+This project demonstrates a complete end-to-end NER pipeline from data preprocessing to model training, evaluation, and prediction on medical texts.

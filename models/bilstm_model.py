@@ -3,9 +3,9 @@ import torch.nn as nn
 from torchcrf import CRF
 
 class ClassicBiLSTMNER(nn.Module):
-    def __init__(self, num_labels, embedding_dim=300, hidden_dim=256, dropout=0.1, vocab_size=10000):
+    def __init__(self, num_labels, vocab_size, embedding_dim=300, hidden_dim=256, dropout=0.1):
         super(ClassicBiLSTMNER, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)  # Adjust vocab_size and padding_idx
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0) 
         self.bilstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
         self.dropout = nn.Dropout(dropout)
         self.classifier = nn.Linear(hidden_dim * 2, num_labels)
@@ -22,3 +22,4 @@ class ClassicBiLSTMNER(nn.Module):
             return loss
         else:
             return self.crf.decode(emissions, mask=attention_mask)
+

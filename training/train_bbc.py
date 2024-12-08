@@ -2,9 +2,9 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from BBC.utils import Dataset, collate_fn, get_label # type: ignore
-from BBC.models.bbc_model import Model # type: ignore
-from BBC.config import * # type: ignore
+from BBC.utils import Dataset, collate_fn, get_label 
+from BBC.models.bbc_model import Model 
+from BBC.config import *
 
 if __name__ == '__main__':
     # Initialize the dataset and data loader

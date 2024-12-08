@@ -5,7 +5,7 @@ from transformers import BertModel
 class ClassicBERTNER(nn.Module):
     def __init__(self, num_labels):
         super(ClassicBERTNER, self).__init__()
-        self.bert = BertModel.from_pretrained('bert-base-uncased')  # Update as per your BERT model
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.bert.config.hidden_size, num_labels)
     
@@ -15,7 +15,7 @@ class ClassicBERTNER(nn.Module):
         logits = self.classifier(sequence_output)
         
         if labels is not None:
-            loss_fct = nn.CrossEntropyLoss(ignore_index=-100)  # Adjust ignore_index as needed
+            loss_fct = nn.CrossEntropyLoss(ignore_index=-100) 
             # Reshape for loss computation
             active_loss = attention_mask.view(-1) == 1
             active_logits = logits.view(-1, logits.shape[-1])[active_loss]
