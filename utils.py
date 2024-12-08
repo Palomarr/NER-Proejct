@@ -3,7 +3,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils import data
 from config import *
 import pandas as pd
-from seqeval.metrics import classification_report
+from seqeval.metrics import classification_report, accuracy_score
 
 from transformers import BertTokenizerFast, logging
  
@@ -136,5 +136,5 @@ def extract(label, text):
 
 
 def report(y_true, y_pred):
-    return classification_report(y_true, y_pred)
+    return classification_report(y_true, y_pred), accuracy_score(y_true, y_pred)
     

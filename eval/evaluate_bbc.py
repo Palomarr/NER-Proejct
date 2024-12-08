@@ -1,9 +1,10 @@
 import torch
 from torch.utils.data import DataLoader
-from seqeval.metrics import classification_report
-from utils import Dataset, collate_fn, get_label, report
-from model import Model
-from config import *
+from seqeval.metrics import accuracy_score
+
+from BBC.utils import Dataset, collate_fn, get_label, report
+from BBC.models.bbc_model import Model
+from BBC.config import *
 
 if __name__ == '__main__':
     # Initialize the test dataset and data loader
@@ -23,10 +24,10 @@ if __name__ == '__main__':
     
     # Load the saved state dictionary
     try:
-        state_dict = torch.load(MODEL_DIR + 'model_epoch_50.pth', map_location=DEVICE, weights_only=True)
+        state_dict = torch.load(MODEL_DIR + 'bbc/model_epoch_50.pth', map_location=DEVICE, weights_only=True)
     except TypeError:
         # If weights_only is not supported, omit it
-        state_dict = torch.load(MODEL_DIR + 'model_epoch_50.pth', map_location=DEVICE)
+        state_dict = torch.load(MODEL_DIR + 'bbc/model_epoch_50.pth', map_location=DEVICE)
     
     model.load_state_dict(state_dict)
     
@@ -62,4 +63,7 @@ if __name__ == '__main__':
                 y_true_list.append([id2label[i.item()] for i in y[m == True]])
 
     # Generate and print the evaluation report
-    print(report(y_true_list, y_pred_list))
+    classification_rep, accuracy = report(y_true_list, y_pred_list)
+    print("\n=== Classification Report ===\n")
+    print(classification_rep)
+    print(f"\n=== Accuracy Score ===\nAccuracy: {accuracy:.4f}")

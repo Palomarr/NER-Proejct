@@ -1,8 +1,6 @@
 import torch.nn as nn
 from torchcrf import CRF
-import torch
 from transformers import BertModel
-from transformers import BertTokenizer
 from config import BERT_MODEL
 
 # Define constants
@@ -10,7 +8,6 @@ EMBEDDING_DIM = 768  # Embedding dimension (BERT default)
 HIDDEN_SIZE = 256  # LSTM hidden size
 
 
-# model.py
 
 class Model(nn.Module):
     def __init__(self, num_labels):

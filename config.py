@@ -1,11 +1,11 @@
-ORIGIN_DIR = './input/origin/'
-ANNOTATION_DIR = './output/cross/annotation/'
+ORIGIN_DIR = './BBC/input/origin/'
+ANNOTATION_DIR = './BBC/output/annotation/'
 
-TRAIN_SAMPLE_PATH = './output/cross/train_sample.txt'
-TEST_SAMPLE_PATH = './output/cross/test_sample.txt'
+TRAIN_SAMPLE_PATH = './BBC/output/train_sample.txt'
+TEST_SAMPLE_PATH = './BBC/output/test_sample.txt'
 
-VOCAB_PATH = './output/cross/vocab.txt'
-LABEL_PATH = './output/cross/label.txt'
+VOCAB_PATH = './BBC/output/vocab.txt'
+LABEL_PATH = './BBC/output/label.txt'
 
 WORD_PAD = '<PAD>'
 WORD_UNK = '<UNK>'
@@ -21,7 +21,7 @@ LR = 1e-4
 EPOCH = 50
 GRAD_CLIP=1.0
 
-MODEL_DIR = './output/cross/model/'
+MODEL_DIR = './BBC/output/model/'
 
 import torch
 
