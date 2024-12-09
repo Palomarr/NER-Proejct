@@ -8,32 +8,42 @@ from BBC.utils import Dataset, collate_fn, get_label, get_vocab
 from BBC.config import *
 
 
-def evaluate_classic_bilstm(model_epoch=50):
+def evaluate_classic_bilstm(model_path=None, model_epoch=None):
     """
     Evaluate the Classic BiLSTM-CRF NER model on the test set.
     
     Args:
-        model_epoch (int): The epoch number of the saved model to load.
+        model_path (str): Path to the model file. If None, uses the best model.
+        model_epoch (int): Epoch number of the model to evaluate. If None, uses the best model.
     """
+    if model_path is None and model_epoch is not None:
+        model_path = f"{MODEL_DIR}/bilstm/model_epoch_{model_epoch}.pth"
+    elif model_path is None:
+        model_path = f"{MODEL_DIR}/bilstm/best_model.pth"
+    
     # Load label information
     label_list, label2id, id2label = get_label()
     num_labels = len(label_list)
     
-    # Derive vocab_size dynamically
+    # Load the vocabulary from the saved model's epoch
     vocab, word2id = get_vocab()
     vocab_size = len(vocab)
     
-    # Initialize the model with vocab_size
-    model = ClassicBiLSTMNER(num_labels=num_labels, vocab_size=vocab_size).to(DEVICE)
+    print(f"Vocabulary size: {vocab_size}")
     
-    # Construct model path
-    model_path = f"{MODEL_DIR}/bilstm/model_epoch_{model_epoch}.pth"
+    # Load model vocabulary size from the saved state
     if not os.path.exists(model_path):
         print(f"Model file {model_path} not found.")
         return
     
+    saved_state = torch.load(model_path, map_location=DEVICE)
+    saved_vocab_size = saved_state['embedding.weight'].shape[0]
+    
+    # Initialize the model with saved vocabulary size
+    model = ClassicBiLSTMNER(num_labels=num_labels, vocab_size=saved_vocab_size).to(DEVICE)
+    
     # Load model state
-    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    model.load_state_dict(saved_state)
     model.eval()
     print(f"Loaded Classic BiLSTM model from {model_path}")
     
@@ -47,6 +57,9 @@ def evaluate_classic_bilstm(model_epoch=50):
     
     with torch.no_grad():
         for batch_idx, (input_ids, labels, attention_mask) in enumerate(test_loader):
+            # Clamp input_ids to valid vocabulary indices
+            input_ids = torch.clamp(input_ids, min=0, max=saved_vocab_size-1)
+            
             input_ids = input_ids.to(DEVICE)
             attention_mask = attention_mask.to(DEVICE)
             labels = labels.to(DEVICE)
@@ -89,4 +102,4 @@ def evaluate_classic_bilstm(model_epoch=50):
 
 
 if __name__ == '__main__':
-    evaluate_classic_bilstm(model_epoch=50)
+    evaluate_classic_bilstm()

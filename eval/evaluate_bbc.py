@@ -1,12 +1,94 @@
 import torch
 from torch.utils.data import DataLoader
-from seqeval.metrics import accuracy_score
+from seqeval.metrics import accuracy_score, precision_score, recall_score, f1_score
+from seqeval.metrics import classification_report
+import logging
+from typing import Dict, List
+import os
 
-from BBC.utils import Dataset, collate_fn, get_label, report
-from BBC.models.bbc_model import Model
+from BBC.utils import Dataset, collate_fn, get_label
+from BBC.models.bbc_model import ImprovedBertBiLSTMCRF
 from BBC.config import *
 
-if __name__ == '__main__':
+def setup_logging():
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        level=logging.INFO,
+        handlers=[
+            logging.FileHandler('evaluation.log'),
+            logging.StreamHandler()
+        ]
+    )
+
+def convert_ids_to_tags(predictions: List[List[int]], 
+                       labels: torch.Tensor, 
+                       mask: torch.Tensor,
+                       id2label: Dict[int, str]) -> tuple:
+    """Convert predicted and true label ids to tag sequences"""
+    y_pred = []
+    y_true = []
+    
+    for pred_seq in predictions:
+        y_pred.append([id2label[i] for i in pred_seq])
+        
+    for label_seq, mask_seq in zip(labels, mask):
+        true_seq = [id2label[label_seq[i].item()] for i in range(len(mask_seq)) if mask_seq[i]]
+        y_true.append(true_seq)
+        
+    return y_true, y_pred
+
+def evaluate(model: torch.nn.Module, data_loader: DataLoader) -> Dict[str, float]:
+    """Evaluate the model and return metrics"""
+    model.eval()
+    
+    _, _, id2label = get_label()
+    
+    all_predictions = []
+    all_labels = []
+    total_loss = 0
+    
+    with torch.no_grad():
+        for batch_idx, (input_ids, labels, attention_mask) in enumerate(data_loader):
+            # Move data to device
+            input_ids = input_ids.to(DEVICE)
+            labels = labels.to(DEVICE)
+            attention_mask = attention_mask.to(DEVICE)
+            
+            # Get model outputs
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                labels=labels
+            )
+            
+            loss = outputs['loss']
+            predictions = outputs['predictions']
+            
+            # Convert ids to tags
+            true_tags, pred_tags = convert_ids_to_tags(
+                predictions, labels, attention_mask, id2label
+            )
+            
+            all_predictions.extend(pred_tags)
+            all_labels.extend(true_tags)
+            total_loss += loss.item()
+    
+    # Calculate metrics
+    metrics = {
+        'loss': total_loss / len(data_loader),
+        'accuracy': accuracy_score(all_labels, all_predictions),
+        'precision': precision_score(all_labels, all_predictions),
+        'recall': recall_score(all_labels, all_predictions),
+        'f1': f1_score(all_labels, all_predictions)
+    }
+    
+    return metrics
+
+def main():
+    # Setup logging
+    setup_logging()
+    
     # Initialize the test dataset and data loader
     test_dataset = Dataset(type='test')
     test_loader = DataLoader(
@@ -16,54 +98,73 @@ if __name__ == '__main__':
         collate_fn=collate_fn,
     )
 
+    # Get label mappings
     label_list, label2id, id2label = get_label()
     num_labels = len(label_list)
 
-    # Instantiate the model
-    model = Model(num_labels=num_labels)
+    # Initialize model with the same configuration as training
+    model_config = {
+        'num_labels': num_labels,
+        'bert_model_name': 'bert-base-uncased',
+        'hidden_size': 256,
+        'num_lstm_layers': 2,
+        'dropout': 0.5,
+        'freeze_bert': False
+    }
     
-    # Load the saved state dictionary
+    model = ImprovedBertBiLSTMCRF(**model_config).to(DEVICE)
+    
+    # Load the best model
     try:
-        state_dict = torch.load(MODEL_DIR + 'bbc/model_epoch_50.pth', map_location=DEVICE, weights_only=True)
-    except TypeError:
-        # If weights_only is not supported, omit it
-        state_dict = torch.load(MODEL_DIR + 'bbc/model_epoch_50.pth', map_location=DEVICE)
-    
-    model.load_state_dict(state_dict)
-    
-    # Move the model to the specified device and set to evaluation mode
-    model.to(DEVICE)
-    model.eval()
+        state_dict = torch.load(f"{MODEL_DIR}/bbc/v1.4/best_model.pth", map_location=DEVICE)
+        model.load_state_dict(state_dict)
+        logging.info("Loaded the best model successfully")
+    except Exception as e:
+        logging.error(f"Error loading model: {str(e)}")
+        return
 
-    y_true_list = []
-    y_pred_list = []
+    # Evaluate
+    metrics = evaluate(model, test_loader)
+    
+    # Print results
+    print("\n=== Evaluation Results ===")
+    for metric_name, value in metrics.items():
+        print(f"{metric_name}: {value:.4f}")
 
-    # Get label mappings
+    # Generate detailed classification report
     _, _, id2label = get_label()
-
+    all_predictions = []
+    all_labels = []
+    
+    model.eval()
     with torch.no_grad():
-        for b, (inputs, targets, masks) in enumerate(test_loader):
-            # Move data to the specified device
-            inputs = inputs.to(DEVICE)
-            masks = masks.to(DEVICE)
-            targets = targets.to(DEVICE)
+        for input_ids, labels, attention_mask in test_loader:
+            input_ids = input_ids.to(DEVICE)
+            attention_mask = attention_mask.to(DEVICE)
+            
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            predictions = outputs['predictions']
+            
+            true_tags, pred_tags = convert_ids_to_tags(
+                predictions, labels, attention_mask, id2label
+            )
+            
+            all_predictions.extend(pred_tags)
+            all_labels.extend(true_tags)
+    
+    # Get classification report
+    report = classification_report(all_labels, all_predictions)
+    print("\n=== Detailed Classification Report ===\n")
+    print(report)
 
-            # Get predictions
-            y_pred = model(inputs, masks)  # Returns list of predicted label indices
+    # Save results to file
+    save_path = os.path.join(os.path.dirname(f"{MODEL_DIR}/bbc/v1.4/best_model.pth"), 'evaluation_results.txt')
+    with open(save_path, 'w') as f:
+        f.write("=== Evaluation Results ===\n")
+        for metric_name, value in metrics.items():
+            f.write(f"{metric_name}: {value:.4f}\n")
+        f.write("\n=== Detailed Classification Report ===\n\n")
+        f.write(report)
 
-            # Compute the loss
-            loss = model(inputs, masks, labels=targets)
-
-            print(f'>> batch: {b}, loss: {loss.item()}')
-        
-            # Convert predicted and true labels to label names
-            for lst in y_pred:
-                y_pred_list.append([id2label[i] for i in lst])
-            for y, m in zip(targets, masks):
-                y_true_list.append([id2label[i.item()] for i in y[m == True]])
-
-    # Generate and print the evaluation report
-    classification_rep, accuracy = report(y_true_list, y_pred_list)
-    print("\n=== Classification Report ===\n")
-    print(classification_rep)
-    print(f"\n=== Accuracy Score ===\nAccuracy: {accuracy:.4f}")
+if __name__ == '__main__':
+    main()
