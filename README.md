@@ -1,6 +1,6 @@
 # Pytorch BiLSTM_CRF Medical Named Entity Recognition (NER)
 
-This project focuses on medical named entity recognition (NER) using combinations of **BERT**, **BiLSTM**, and **CRF** models. The task involves identifying medical entities from text based on annotated data provided by the **Tianchi competition** hosted by Alibaba.
+This project focuses on named entity recognition (NER) using combinations of **BERT**, **BiLSTM**, and **CRF** models.
 
 ## Overview
 
