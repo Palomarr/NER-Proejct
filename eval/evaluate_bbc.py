@@ -86,6 +86,23 @@ def evaluate(model: torch.nn.Module, data_loader: DataLoader) -> Dict[str, float
     
     return metrics
 
+def save_evaluation_results(metrics, classification_report, output_file, hyperparams=None):
+    with open(output_file, 'w') as f:
+        # Add hyperparameter section
+        if hyperparams:
+            f.write("=== Hyperparameters ===\n")
+            for param, value in hyperparams.items():
+                f.write(f"{param}: {value}\n")
+            f.write("\n")  # Add spacing between sections
+
+        # Write metrics
+        f.write("=== Evaluation Results ===\n")
+        for metric, value in metrics.items():
+            f.write(f"{metric}: {value:.4f}\n")
+        
+        f.write("\n=== Detailed Classification Report ===\n")
+        f.write(classification_report)
+
 def main():
     # Setup logging
     setup_logging()
@@ -158,14 +175,24 @@ def main():
     print("\n=== Detailed Classification Report ===\n")
     print(report)
 
-    # Save results to file
-    save_path = os.path.join(os.path.dirname(f"{MODEL_DIR}/best_model.pth"), 'evaluation_results.txt')
-    with open(save_path, 'w') as f:
-        f.write("=== Evaluation Results ===\n")
-        for metric_name, value in metrics.items():
-            f.write(f"{metric_name}: {value:.4f}\n")
-        f.write("\n=== Detailed Classification Report ===\n\n")
-        f.write(report)
+    # Define hyperparameters
+    hyperparams = {
+        'batch_size': BATCH_SIZE,
+        'learning_rate': LR,
+        'model_type': 'BERT-base-uncased',
+        'epochs': EPOCH,
+        'hidden_size': model_config['hidden_size'],
+        'num_lstm_layers': model_config['num_lstm_layers'],
+        'dropout': model_config['dropout'],
+    }
+    
+    # When saving results
+    save_evaluation_results(
+        metrics=metrics,
+        classification_report=report,
+        output_file=f"{MODEL_DIR}/evaluation_results.txt",
+        hyperparams=hyperparams
+    )
 
 if __name__ == '__main__':
     main()

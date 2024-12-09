@@ -1,0 +1,15 @@
+=== Evaluation Metrics for Classic BERT Model ===
+
+Accuracy: 0.9668
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    location     0.8506    0.9073    0.8780      2114
+        misc     0.7374    0.7149    0.7260       982
+organisation     0.8053    0.8521    0.8281      2583
+      person     0.9154    0.8683    0.8912      2718
+
+   micro avg     0.8430    0.8552    0.8491      8397
+   macro avg     0.8272    0.8356    0.8308      8397
+weighted avg     0.8444    0.8552    0.8491      8397

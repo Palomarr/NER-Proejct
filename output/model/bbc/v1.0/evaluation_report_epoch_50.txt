@@ -1,0 +1,20 @@
+=== Evaluation Metrics on Test Set ===
+
+Accuracy: 0.9601
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    location     0.8629    0.8953    0.8788      2989
+        misc     0.7218    0.6906    0.7059      1251
+organisation     0.8624    0.8443    0.8532      3519
+      person     0.8462    0.9164    0.8799      2989
+
+   micro avg     0.8424    0.8606    0.8514     10748
+   macro avg     0.8233    0.8366    0.8295     10748
+weighted avg     0.8417    0.8606    0.8506     10748
+
+params:
+BATCH_SIZE = 100
+LR = 1e-4
+EPOCH = 50

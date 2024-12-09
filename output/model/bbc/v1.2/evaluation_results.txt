@@ -1,0 +1,24 @@
+=== Evaluation Results ===
+loss: 4.2306
+accuracy: 0.9800
+precision: 0.9061
+recall: 0.9100
+f1: 0.9080
+
+=== Detailed Classification Report ===
+
+              precision    recall  f1-score   support
+
+    location       0.90      0.93      0.92      2114
+        misc       0.79      0.75      0.77       982
+organisation       0.89      0.89      0.89      2583
+      person       0.97      0.97      0.97      2718
+
+   micro avg       0.91      0.91      0.91      8397
+   macro avg       0.89      0.89      0.89      8397
+weighted avg       0.91      0.91      0.91      8397
+
+params:
+BATCH_SIZE = 64
+LR = 5e-4
+EPOCH = 100

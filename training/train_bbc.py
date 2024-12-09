@@ -11,7 +11,7 @@ from BBC.utils import Dataset, collate_fn, get_label, evaluate
 from BBC.models.bbc_model import ImprovedBertBiLSTMCRF
 from BBC.config import *
 
-MODEL_DIR = './BBC/output/model/bbc/hyper/v2.0'
+MODEL_DIR = './BBC/output/model/bbc/hyper/v2.1'
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 def setup_logging():

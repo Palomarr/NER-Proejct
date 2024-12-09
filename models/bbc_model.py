@@ -13,7 +13,7 @@ class ImprovedBertBiLSTMCRF(nn.Module):
         bert_model_name: str = 'bert-base-uncased',
         embedding_dim: int = 768,
         hidden_size: int = 256,
-        num_lstm_layers: int = 2,  
+        num_lstm_layers: int = 1,  
         dropout: float = 0.5,     
         freeze_bert: bool = False,  
     ):

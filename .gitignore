@@ -1,8 +1,12 @@
-output/
+input/
+output/*.txt
+output/model/*/v*/*.pth
+output/model/*/hyper/v*/*.pth
+output/model/*/*.pth
 HuggingFace/
 .idea/
 .ipynb_checkpoints
 *.pyc
 __pycache__/
-input/
 .DS_Store
+*/__pycache__/
