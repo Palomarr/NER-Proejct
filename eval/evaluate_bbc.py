@@ -9,6 +9,7 @@ import os
 from BBC.utils import Dataset, collate_fn, get_label
 from BBC.models.bbc_model import ImprovedBertBiLSTMCRF
 from BBC.config import *
+from BBC.training.train_bbc import MODEL_DIR
 
 def setup_logging():
     logging.basicConfig(
@@ -116,7 +117,7 @@ def main():
     
     # Load the best model
     try:
-        state_dict = torch.load(f"{MODEL_DIR}/bbc/v1.4/best_model.pth", map_location=DEVICE)
+        state_dict = torch.load(f"{MODEL_DIR}/best_model.pth", map_location=DEVICE)
         model.load_state_dict(state_dict)
         logging.info("Loaded the best model successfully")
     except Exception as e:
@@ -158,7 +159,7 @@ def main():
     print(report)
 
     # Save results to file
-    save_path = os.path.join(os.path.dirname(f"{MODEL_DIR}/bbc/v1.4/best_model.pth"), 'evaluation_results.txt')
+    save_path = os.path.join(os.path.dirname(f"{MODEL_DIR}/best_model.pth"), 'evaluation_results.txt')
     with open(save_path, 'w') as f:
         f.write("=== Evaluation Results ===\n")
         for metric_name, value in metrics.items():

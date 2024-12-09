@@ -11,6 +11,9 @@ from BBC.utils import Dataset, collate_fn, get_label, evaluate
 from BBC.models.bbc_model import ImprovedBertBiLSTMCRF
 from BBC.config import *
 
+MODEL_DIR = './BBC/output/model/bbc/hyper/v2.0'
+os.makedirs(MODEL_DIR, exist_ok=True)
+
 def setup_logging():
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -33,7 +36,7 @@ def save_checkpoint(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
         'best_val_f1': best_val_f1,
         'config': config
     }
-    torch.save(checkpoint, f"{MODEL_DIR}/bbc/v1.4/checkpoint_epoch_{epoch}.pth")
+    torch.save(checkpoint, f"{MODEL_DIR}/checkpoint_epoch_{epoch}.pth")
     logging.info(f"Checkpoint saved for epoch {epoch}")
 
 def train_epoch(model: torch.nn.Module, train_loader: DataLoader, 
@@ -163,7 +166,7 @@ def main():
                 if val_f1 > best_val_f1:
                     best_val_f1 = val_f1
                     patience_counter = 0
-                    torch.save(model.state_dict(), f"{MODEL_DIR}/bbc/v1.4/best_model.pth")
+                    torch.save(model.state_dict(), f"{MODEL_DIR}/best_model.pth")
                     logging.info(f"New best model saved with F1: {val_f1:.4f}")
                     save_checkpoint(model, optimizer, scheduler, epoch, best_val_f1, model_config)
                 else:
